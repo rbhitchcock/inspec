@@ -19,7 +19,6 @@ else
 end
 
 if os.unix?
-
   # test regular file
   describe file('/tmp/file') do
     it { should exist }
@@ -108,4 +107,9 @@ if os.unix?
     its('type') { should eq :directory }
   end
 
+elsif os.windows?
+  describe file('C:\\Windows') do
+    it { should exist }
+    it { should be_directory }
+  end
 end
