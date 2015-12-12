@@ -16,7 +16,6 @@ module Inspec
     end
 
     attr_reader :params
-    attr_reader :metadata
     attr_reader :path
 
     def initialize(options = nil)
@@ -29,8 +28,9 @@ module Inspec
       fail 'Cannot read an empty path.' if @path.nil? || @path.empty?
       fail "Cannot find directory #{@path}" unless File.directory?(@path)
 
-      @metadata = read_metadata
-      @params = @metadata.params unless @metadata.nil?
+      @params = read_metadata
+      # use the id from parameter, name or fallback to nil
+      @profile_id = options[:id] || params[:name] || nil
 
       @params[:rules] = rules = {}
       @runner = Runner.new(
@@ -106,6 +106,9 @@ module Inspec
       warn.call('No supports defined') if @params[:supports].empty?
       @logger.info 'Metadata OK.' if no_warnings
 
+      # check if deprecated metadata.rb exists
+      warn.call('The use of `metadata.rb` is deprecated. Use `metadata.yml`.') if Pathname.new(path).join("metadata.rb").exist?
+
       # check if the profile is using the old test directory instead of the
       # new controls directory
       warn.call('Profile uses deprecated `test` directory, rename it to `controls`') if Pathname.new(path).join("test").exist? && !Pathname.new(path).join("controls").exist?
@@ -138,8 +141,12 @@ module Inspec
     private
 
     def read_metadata
-      mpath = File.join(@path, 'metadata.rb')
-      @metadata = Metadata.from_file(mpath, @profile_id, @logger)
+      mpath = Pathname.new(path).join('metadata.yml')
+
+      # fallback to metadata.rb if metadata.yml does not exist
+      # TODO deprecated, will be removed in InSpec 1.0
+      mpath = File.join(@path, 'metadata.rb') if !mpath.exist?
+      Metadata.from_file(mpath, @profile_id, @logger)
     end
   end
 end
