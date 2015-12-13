@@ -108,7 +108,7 @@ module Inspec
 
       # check if the profile is using the old test directory instead of the
       # new controls directory
-      warn.call('Profile uses deprecated `test` directory, rename it to `controls`') if Pathname.new(path).join("test").exist?
+      warn.call('Profile uses deprecated `test` directory, rename it to `controls`') if Pathname.new(path).join("test").exist? && !Pathname.new(path).join("controls").exist?
 
       no_warnings = true
       if @params[:rules].empty?
