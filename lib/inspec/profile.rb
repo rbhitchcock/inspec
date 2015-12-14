@@ -4,6 +4,7 @@
 # author: Christoph Hartmann
 
 require 'inspec/metadata'
+require 'pathname'
 
 module Inspec
   class Profile # rubocop:disable Metrics/ClassLength
@@ -16,10 +17,11 @@ module Inspec
 
     attr_reader :params
     attr_reader :metadata
+    attr_reader :path
 
     def initialize(options = nil)
       @options = options || {}
-      @profile_id = options[:id] || nil
+
       @params = {}
       @logger = options[:logger] || Logger.new(nil)
 
@@ -98,20 +100,23 @@ module Inspec
         error.call('Profile name must be defined as: OWNER/ID')
       end
 
-      warn.call('No version defined') if @params[:name].to_s.empty?
-      warn.call('No title defined') if @params[:name].to_s.empty?
-      warn.call('No maintainer defined') if @params[:name].to_s.empty?
-      warn.call('No supports defined') if @params[:name].empty?
+      warn.call('No version defined') if @params[:version].to_s.empty?
+      warn.call('No title defined') if @params[:title].to_s.empty?
+      warn.call('No maintainer defined') if @params[:maintainer].to_s.empty?
+      warn.call('No supports defined') if @params[:supports].empty?
       @logger.info 'Metadata OK.' if no_warnings
 
+      # check if the profile is using the old test directory instead of the
+      # new controls directory
+      warn.call('Profile uses deprecated `test` directory, rename it to `controls`') if Pathname.new(path).join("test").exist?
+
       no_warnings = true
-      if @params[:name].empty?
+      if @params[:rules].empty?
         warn.call('No rules were found.')
-      else
-        @logger.debug "Found #{@params[:name].length} rules."
       end
 
       # iterate over hash of groups
+      rules_counter = 0
       @params[:rules].each do |group, rules_array|
         @logger.debug "Verify all rules in  #{group}"
         rules_array.each do |id, rule|
@@ -121,8 +126,10 @@ module Inspec
           warn.call("Rule #{id} has impact > 1.0") if rule[:impact].to_f > 1.0
           warn.call("Rule #{id} has impact < 0.0") if rule[:impact].to_f < 0.0
           warn.call("Rule #{id} has no tests defined") if rule[:checks].nil? or rule[:checks].empty?
+          rules_counter += 1
         end
       end
+      @logger.debug "Found #{rules_counter} rules."
 
       @logger.info 'Rule definitions OK.' if no_warnings
       no_errors
