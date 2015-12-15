@@ -97,8 +97,6 @@ module Inspec
 
       if @params[:name].to_s.empty?
         error.call('No profile name defined')
-      elsif !(@params[:name].to_s =~ %r{^\S+\/\S+$})
-        error.call('Profile name must be defined as: OWNER/ID')
       end
 
       warn.call('No version defined') if @params[:version].to_s.empty?
