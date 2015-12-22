@@ -4,9 +4,9 @@
 
 require 'helper'
 
-def load_profile(name)
+def load_profile(name, opts = {})
   pwd = File.dirname(__FILE__)
-  Inspec::Profile.from_path("#{pwd}/mock/profiles/#{name}")
+  Inspec::Profile.from_path("#{pwd}/mock/profiles/#{name}", opts)
 end
 
 describe Inspec::Profile do
@@ -22,6 +22,8 @@ describe Inspec::Profile do
       end
     end
   }
+
+  let(:logger) { Minitest::Mock.new }
 
   describe 'with empty profile' do
     let(:profile) { load_profile('empty') }
@@ -44,6 +46,39 @@ describe Inspec::Profile do
 
     it 'has no rules' do
       profile.params[:rules].must_equal({})
+    end
+  end
+
+  describe 'when checking' do
+    describe 'an empty profile' do
+      let(:profile) { load_profile('empty', {logger: logger}) }
+
+      it 'prints loads of warnings' do
+        logger.expect :info, nil, ['Checking profile in test/unit/mock/profiles/empty']
+        logger.expect :error, nil, ['Missing profile name in metadata.rb']
+        logger.expect :error, nil, ['Missing profile version in metadata.rb']
+        logger.expect :warn, nil, ['Missing profile title in metadata.rb']
+        logger.expect :warn, nil, ['Missing profile summary in metadata.rb']
+        logger.expect :warn, nil, ['Missing profile maintainer in metadata.rb']
+        logger.expect :warn, nil, ['Missing profile copyright in metadata.rb']
+        logger.expect :warn, nil, ['No controls or tests were defined.']
+
+        profile.check
+        logger.verify
+      end
+    end
+
+    describe 'a complete metadata profile' do
+      let(:profile) { load_profile('complete-meta', {logger: logger}) }
+
+      it 'prints ok messages' do
+        logger.expect :info, nil, ['Checking profile in test/unit/mock/profiles/complete-meta']
+        logger.expect :info, nil, ['Metadata OK.']
+        logger.expect :warn, nil, ['No controls or tests were defined.']
+
+        profile.check
+        logger.verify
+      end
     end
   end
 end
